@@ -22,17 +22,13 @@ def _make_frame(frame_index: int) -> CsiFrame:
     layout = CSI_SESSION.layout
     values = []
     rng = Random(frame_index)
+    amplitude = 1.0  # Flat baseline across subcarriers, links, and frames.
     noise_std = 0.03
     none_prob = 0.015
 
     for tx in range(layout.tx_count):
         for rx in range(layout.rx_count):
             for tone in layout.subcarrier_indices:
-                
-                # Smooth underlying amplitude drift.
-                amplitude = 1.0 + 0.12 * tx + 0.06 * rx + 0.02 * tone
-                amplitude += 0.04 * sin(0.6 * frame_index + 0.2 * tone)
-
                 # The phase crosses pi so atan2 on the raw CSI wraps.
                 phase = 2.4 + 0.25 * frame_index + 0.15 * tone + 0.2 * (tx - rx)
                 real = amplitude * cos(phase) + rng.gauss(0, noise_std)
