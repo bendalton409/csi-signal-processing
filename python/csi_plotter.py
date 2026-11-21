@@ -1,8 +1,12 @@
 """Save raw and processed CSI plots for individual TX/RX links."""
 
-from math import atan2, nan
+from collections.abc import Sequence
+from math import nan
 from pathlib import Path
+from typing import Optional
 
+import numpy as np
+from matplotlib import colormaps
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 
@@ -46,6 +50,62 @@ class CsiPlotter:
         """Save amplitude and phase after wavelet denoising."""
 
         return self._plot_pipeline_stage(frame, tx, rx, "5-wavelet", "Wavelet denoising")
+
+    def plot_subcarrier_unwrapping_heatmap(
+        self, frames: Sequence[SignalFrame], tx: int, rx: int, *,
+        phase_limits: Optional[tuple[float, float]] = None,
+    ) -> Path:
+        """Save a phase heatmap from frames unwrapped across subcarriers."""
+        return self._plot_phase_heatmap(
+            frames, tx, rx, "subcarrier-unwrapped", "Unwrapped across subcarriers", phase_limits
+        )
+
+    def plot_time_unwrapping_heatmap(
+        self, frames: Sequence[SignalFrame], tx: int, rx: int, *,
+        phase_limits: Optional[tuple[float, float]] = None,
+    ) -> Path:
+        """Save a phase heatmap after unwrapping across subcarriers and time."""
+        return self._plot_phase_heatmap(
+            frames, tx, rx, "time-unwrapped", "Unwrapped across subcarriers and time", phase_limits
+        )
+
+    def _plot_phase_heatmap(
+        self, frames: Sequence[SignalFrame], tx: int, rx: int, stage: str, title: str,
+        phase_limits: Optional[tuple[float, float]],
+    ) -> Path:
+        if not frames:
+            raise ValueError("A phase heatmap requires at least one frame")
+        link = self._link_slice(tx, rx)
+        tones = self.layout.subcarrier_indices
+        size = self.layout.tx_count * self.layout.rx_count * len(tones)
+        if not tones or any(len(frame.phase_rad) != size for frame in frames):
+            raise ValueError("Phase frames must match the session layout")
+
+        phase = np.array([frame.phase_rad[link] for frame in frames], dtype=float).T
+        cmap = colormaps["viridis"].with_extremes(bad="#dadde3")
+        vmin, vmax = phase_limits if phase_limits is not None else (None, None)
+        figure = Figure(figsize=(9, 4.8), layout="constrained")
+        FigureCanvasAgg(figure)
+        axes = figure.subplots()
+        image = axes.imshow(
+            np.ma.masked_invalid(phase), origin="lower", aspect="auto",
+            interpolation="nearest", cmap=cmap, vmin=vmin, vmax=vmax,
+        )
+
+        frame_ticks = range(0, len(frames), max(1, (len(frames) + 9) // 10))
+        tone_ticks = range(0, len(tones), max(1, (len(tones) + 9) // 10))
+        axes.set_xticks(frame_ticks, [f"{frames[i].captured_at_ns / 1e6:g}" for i in frame_ticks])
+        axes.set_yticks(tone_ticks, [tones[i] for i in tone_ticks])
+        axes.set_xlabel("Capture time (ms, one column per frame)")
+        axes.set_ylabel("OFDM subcarrier index")
+        figure.colorbar(image, ax=axes, label="Phase (rad)")
+
+        time_span = f"{frames[0].captured_at_ns}ns-{frames[-1].captured_at_ns}ns"
+        figure.suptitle(f"{title} · TX {tx}, RX {rx}")
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        path = self.output_dir / f"csi_tx{tx}_rx{rx}_{time_span}_{stage}_heatmap.png"
+        figure.savefig(path, dpi=250)
+        return path
 
     def _plot_pipeline_stage(
         self, 

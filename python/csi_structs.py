@@ -16,7 +16,7 @@ class CsiLayout:
     rx_count
         Number of receive chains.
     subcarrier_indices
-        Actual OFDM tone indices in tensor order. 
+        Actual OFDM tone indices in increasing order. 
         Indices can have gaps.
         For example, if subcarrier_indices[1] = -2, for all tx-rx links in the frame,
         CsiTensor[tx][rx][1] = CFR Complex value for frequency: 
