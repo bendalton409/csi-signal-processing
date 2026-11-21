@@ -36,7 +36,7 @@ class Complex:
 @dataclass(frozen=True)
 class CsiTensor(Generic[T]):
     """Flat [tx_stream, rx_chain, subcarrier] samples, with subcarrier fastest.
-
+    T will either be a Complex or ProcessedSample
     None marks an unavailable sample. The shape comes from CsiSession.layout.
     """
 
