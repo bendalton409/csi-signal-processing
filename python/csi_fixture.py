@@ -1,55 +1,8 @@
 """Ten synthetic input frames using the proposed CSI capture contract."""
 
-from dataclasses import dataclass
+from .csi_structs import CsiSession, CsiLayout, CsiFrame, CsiTensor, Complex
 from math import cos, sin
 from random import Random
-from typing import Optional
-
-
-@dataclass(frozen=True)
-class CsiLayout:
-    """Axis sizes and OFDM tone indices for a capture session."""
-
-    tx_count: int
-    rx_count: int
-    subcarrier_indices: tuple[int, ...]
-
-
-@dataclass(frozen=True)
-class CsiSession:
-    """Fixed metadata shared by all frames in one session."""
-
-    layout: CsiLayout
-    center_frequency_hz: int
-    channel_bandwidth_hz: int
-    subcarrier_spacing_hz: int
-    amplitude_convention: str
-
-
-@dataclass(frozen=True)
-class ComplexCsi:
-    """One raw complex channel coefficient."""
-
-    real: float
-    imaginary: float
-
-
-@dataclass(frozen=True)
-class CsiTensor:
-    """Flat [tx_stream, rx_chain, subcarrier] samples, with subcarrier fastest.
-
-    None marks a missing coefficient. The shape comes from CsiSession.layout.
-    """
-
-    values: tuple[Optional[ComplexCsi], ...]
-
-
-@dataclass(frozen=True)
-class CsiFrame:
-    """One capture instant, timestamped in nanoseconds from session start."""
-
-    captured_at_ns: int
-    csi: CsiTensor
 
 
 CSI_SESSION = CsiSession(
@@ -89,7 +42,7 @@ def _make_frame(frame_index: int) -> CsiFrame:
                 if (rng.uniform(0,1) < none_prob):
                   values.append(None)
                 else:
-                  values.append(ComplexCsi(real, imaginary))  
+                  values.append(Complex(real, imaginary))  
 
     captured_at_ns = frame_index * 10_000_000
 
