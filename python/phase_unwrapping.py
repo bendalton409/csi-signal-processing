@@ -61,25 +61,21 @@ class PhaseUnwrapper:
         for link in range(self._link_count):
             start = link * self._tone_count
             end = start + self._tone_count
-            link_phase = frame.phase_rad[start:end]
+            curr_link = frame.phase_rad[start:end]
+            prev_link = self._previous.phase_rad[start:end]
 
-            for idx, prev_angle in enumerate(self._previous.phase_rad[start:end]):
-                angle = link_phase[idx]
-
+            for angle, prev_angle in zip(curr_link, prev_link):
                 if angle is not None and prev_angle is not None:
-                    # Align the whole link to an overlapping tone so returning
-                    # tones use the same phase branch as their neighbours.
                     delta = angle - prev_angle
-
 
                     if abs(delta) > pi:
                         shift = remainder(delta, tau) - delta
-                        link_phase = tuple(
-                            value if value is None else value + shift for value in link_phase
+                        curr_link = tuple(
+                            value if value is None else value + shift for value in curr_link
                         )
                     break
 
-            unwrapped.extend(link_phase)
+            unwrapped.extend(curr_link)
 
         result = SignalFrame(frame.captured_at_ns, frame.amplitude, tuple(unwrapped))
         self._previous = result
@@ -88,7 +84,10 @@ class PhaseUnwrapper:
     def _validate_frame(self, frame: SignalFrame) -> None:
         size = self._link_count * self._tone_count
         if len(frame.phase_rad) != size or len(frame.amplitude) != size:
-            raise ValueError(f"Expected {size} CSI slots for this session")
+            raise ValueError(
+                f"Frame at {frame.captured_at_ns} ns requires {size} CSI slots. "
+                f"Got {len(frame.phase_rad)} phase and {len(frame.amplitude)} amplitude slots."
+            )
 
     def process(self, frame: SignalFrame) -> SignalFrame:
         """Return a frame with unwrapped phase across subcarriers and time and the original amplitude."""
