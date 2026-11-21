@@ -14,7 +14,6 @@ CSI_SESSION = CsiSession(
     center_frequency_hz=5_180_000_000,
     channel_bandwidth_hz=20_000_000,
     subcarrier_spacing_hz=78_125,
-    amplitude_convention="Linear amplitude in arbitrary synthetic units",
 )
 
 
