@@ -23,6 +23,8 @@ The pipeline processes all 10 fixture frames and plots the first frame for TX 0 
 
 The five plots show the simulated input, unwrapped phase, phase residuals, Hampel-filtered signals, and wavelet-denoised signals.
 
+Two additional PNGs ending in `_heatmap.png` compare phase after subcarrier unwrapping and after time unwrapping for TX 1 / RX 0. They show all 10 frames on the same phase colour scale. Grey cells mark missing samples.
+
 ## Project architecture
 
 [`python/main.py`](python/main.py) runs the stages in this order.

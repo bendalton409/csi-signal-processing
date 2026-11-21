@@ -16,7 +16,7 @@ class PhaseTests(TestCase):
     def test_wrapped_ramp_and_affine_offset(self):
         tones = (-3, -1, 1, 3)
         residual = (0.2, -0.2, -0.2, 0.2)
-        session = CsiSession(CsiLayout(1, 1, tones), 0, 0, 0, "synthetic")
+        session = CsiSession(CsiLayout(1, 1, tones), 0, 0, 0)
         unwrap = PhaseUnwrapper(session)
 
         for index in range(12):
