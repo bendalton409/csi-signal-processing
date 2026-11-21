@@ -13,8 +13,9 @@ class CsiPlotter:
     """Plot a single tx-rx link after each stage of the processing pipeline.
     1. Simulated
     2. Phase unwrapping
-    3. Hampel filter
-    4. Wavelet denoising
+    3. Linear phase removal
+    4. Hampel filter
+    5. Wavelet denoising
     """
 
     def __init__(self, session: CsiSession, output_dir: str = "imgs"):
@@ -27,19 +28,24 @@ class CsiPlotter:
         return self._plot_pipeline_stage(frame, tx, rx, "1-simulated", "Simulated")
 
     def plot_unwrapped(self, frame: SignalFrame, tx: int, rx: int) -> Path:
-        """Save amplitude and phase after phase sanitisation."""
+        """Save amplitude and phase after unwrapping."""
 
         return self._plot_pipeline_stage(frame, tx, rx, "2-unwrapped", "Phase unwrapping")
+
+    def plot_phase_residuals(self, frame: SignalFrame, tx: int, rx: int) -> Path:
+        """Save amplitude and phase after linear phase removal."""
+
+        return self._plot_pipeline_stage(frame, tx, rx, "3-phase-residuals", "Phase residuals")
 
     def plot_hampel(self, frame: SignalFrame, tx: int, rx: int) -> Path:
         """Save amplitude and phase after Hampel filtering."""
 
-        return self._plot_pipeline_stage(frame, tx, rx, "3-hampel", "Hampel filtering")
+        return self._plot_pipeline_stage(frame, tx, rx, "4-hampel", "Hampel filtering")
 
     def plot_wavelet(self, frame: SignalFrame, tx: int, rx: int) -> Path:
         """Save amplitude and phase after wavelet denoising."""
 
-        return self._plot_pipeline_stage(frame, tx, rx, "4-wavelet", "Wavelet denoising")
+        return self._plot_pipeline_stage(frame, tx, rx, "5-wavelet", "Wavelet denoising")
 
     def _plot_pipeline_stage(
         self, 
@@ -64,6 +70,7 @@ class CsiPlotter:
         FigureCanvasAgg(figure)
 
         amplitude_axes, phase_axes = figure.subplots(2, 1, sharex=True)
+        phase_axes.set_xlabel("Subcarrier index")
         amp_plot = (amplitude_axes, frame.amplitude, "Amplitude")
         phase_plot = (phase_axes, frame.phase_rad, "Phase (rad)")
 
@@ -73,7 +80,6 @@ class CsiPlotter:
             axes.set_ylabel(label)
             axes.grid(alpha=0.25)
 
-        phase_axes.set_xlabel("Subcarrier index")
         return self._save(figure, stage, title, frame.captured_at_ns, tx, rx)
 
     def _link_slice(self, tx: int, rx: int) -> slice:
