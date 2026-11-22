@@ -1,6 +1,6 @@
 # CSI signal processing
 
-Python prototype for the Connected Care Wi-Fi 7 signal-processing pipeline. It takes synthetic channel state information (CSI), unwraps and corrects the phase, then filters and denoises the amplitude and phase. The demo runs without Wi-Fi hardware or a recorded capture.
+Python prototype for the Connected Care Wi-Fi 7 signal-processing pipeline. The demo generates synthetic channel state information (CSI), unwraps and detrends the phase, and filters and denoises both amplitude and phase. It runs without Wi-Fi hardware or a recorded capture.
 
 ## Setup and run
 
@@ -15,33 +15,35 @@ python -m python.main
 
 On Windows PowerShell, create the environment with `py -3.9 -m venv .venv` and activate it with `.\.venv\Scripts\Activate.ps1`. Then run the same install and launch commands.
 
-## Graphs
+## Pipeline
 
-The demo saves PNGs in [`imgs/`](imgs/), which it creates on the first run. Each image shows linear amplitude and phase (radians) against the OFDM subcarrier index. Missing samples appear as gaps.
+[`python/main.py`](python/main.py) configures the demo to generate 100 frames at 10 µs intervals for one TX/RX link with 100 subcarriers. The simulator adds Gaussian noise to the complex samples and independently marks samples missing with 1.5% probability.
 
-The pipeline processes all 10 fixture frames and plots the first frame for TX 0 / RX 0. Each filename includes the link, the capture time in nanoseconds, and the stage. For example, `imgs/csi_tx0_rx0_0ns_3-phase-residuals.png` shows the result after subtracting the fitted phase trend.
-
-The five plots show the simulated input, unwrapped phase, phase residuals, Hampel-filtered signals, and wavelet-denoised signals.
-
-Two additional PNGs ending in `_heatmap.png` compare phase after subcarrier unwrapping and after time unwrapping for TX 1 / RX 0. They show all 10 frames on the same phase colour scale. Grey cells mark missing samples.
-
-## Project architecture
-
-[`python/main.py`](python/main.py) runs the stages in this order.
+The demo runs each processing stage over the frames in capture order before saving that stage's plots. The processing functions take one `SignalFrame` per call and update it in place. Time unwrapping, Hampel filtering, and wavelet denoising retain state between calls.
 
 | Stage | Module | What it does |
 | --- | --- | --- |
-| Simulate CSI | [`csi_fixture.py`](python/csi_fixture.py) | Generates 10 frames at 10 ms intervals. Each has two transmit streams, two receive chains, and 21 subcarrier slots per link. The fixture adds noise and occasional missing coefficients. |
-| Convert to amplitude and phase | [`csi_conversion.py`](python/csi_conversion.py) | Converts each complex coefficient into linear amplitude and wrapped phase in radians. |
-| Unwrap phase | [`phase_unwrapping.py`](python/phase_unwrapping.py) | Corrects phase wraps across subcarriers and successive frames for each link. |
-| Compute phase residuals | [`phase_residual.py`](python/phase_residual.py) | Fits a straight line against the subcarrier indices for each link in each frame and subtracts it from the unwrapped phase. |
-| Filter outliers | [`hampel_filter.py`](python/hampel_filter.py) | Uses a trailing median and median absolute deviation to filter outliers over time, separately for amplitude and phase at each tensor position. |
-| Denoise | [`wavelet_denoising.py`](python/wavelet_denoising.py) | Applies a multilevel Haar wavelet transform to contiguous runs of amplitude and phase over time. |
+| 1. Simulated input | [`simulation.py`](python/simulation.py), [`frame_conversions.py`](python/frame_conversions.py) | Generates complex CSI and converts it to linear amplitude and wrapped phase in radians. |
+| 2. Subcarrier unwrapping | [`phase_unwrapper.py`](python/phase_unwrapper.py) | Unwraps phase along the subcarrier axis within each frame and link. |
+| 3. Time unwrapping | [`phase_unwrapper.py`](python/phase_unwrapper.py) | Uses the preceding frame to align each link's phase over time. |
+| 4. Phase residuals | [`phase_residual.py`](python/phase_residual.py) | Fits a least-squares line to each link's available phase samples and subtracts it. |
+| 5. Hampel filtering | [`hampel_filter.py`](python/hampel_filter.py) | Checks each tone's amplitude and phase separately for outliers using a trailing five-frame window. |
+| 6. Wavelet denoising | [`wavelet_denoising.py`](python/wavelet_denoising.py) | Applies two levels of Haar soft thresholding to up to four consecutive samples per tone and reconstructs the current value. |
 
-[`csi_structs.py`](python/csi_structs.py) defines the shared session layout and frame types. A `CsiFrame` stores complex CSI and its capture timestamp. A `SignalFrame` stores amplitude and phase in separate tuples. Both use flat `[tx, rx, subcarrier]` ordering, with subcarrier varying fastest. [`csi_plotter.py`](python/csi_plotter.py) uses this layout to select a link and save its graphs.
+[`structs.py`](python/structs.py) defines the session layout and frame types. A `CsiFrame` stores timestamped complex CSI. A `SignalFrame` stores the timestamp and separate amplitude and phase lists. Both use flat `[tx, rx, subcarrier]` ordering, with subcarrier varying fastest. Missing samples are represented by `None`.
 
-## Tests
+## Graphs
 
-```sh
-python -m unittest python.test_csi_dsp -v
-```
+[`graphs.py`](python/graphs.py) creates `imgs/` and writes 18 PNGs by default, three per stage. Each image shows linear amplitude and phase in radians for TX 0 / RX 0.
+
+| Filename suffix | What it shows |
+| --- | --- |
+| `_type=freq.png` | The final frame plotted across subcarriers. |
+| `_type=time.png` | Subcarrier 0 plotted across all frames. |
+| `_type=heatmap.png` | Stacked amplitude and phase heatmaps with one column per frame and one row per subcarrier. The shared x-axis shows capture time in milliseconds. |
+
+For example, `imgs/5_hampel_type=heatmap.png` shows the result after Hampel filtering. Missing samples appear as gaps in the line plots and grey cells in the heatmaps. Each heatmap panel scales its own colours.
+
+## Planned work
+
+Live stream input, feature extraction, and `ProcessedFrame` output are tracked in [`TODO.md`](TODO.md).
