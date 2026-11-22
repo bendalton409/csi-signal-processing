@@ -189,6 +189,6 @@ def plot_pipeline_stage(
   
   """Save the plots and heatmap for one processing stage."""
 
-  plot_against_freq(frames[0], tx, rx, stage, output_dir=output_dir)
+  plot_against_freq(frames[-1], tx, rx, stage, output_dir=output_dir)
   plot_against_time(frames, tx, rx, tone, stage, output_dir=output_dir)
   heatmap_stages(frames, tx, rx, stage, output_dir=output_dir)
