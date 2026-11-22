@@ -23,13 +23,14 @@ def main() -> None:
 
     phases = [
         phase
-        for frame in subcarrier_frames + unwrapped_frames
+        for frame in subcarrier_frames + unwrapped_frames + corrected_frames
         for phase in frame.phase_rad
         if phase is not None
     ]
     phase_limits = (min(phases), max(phases))
-    plotter.plot_subcarrier_unwrapping_heatmap(subcarrier_frames, tx=1, rx=0, phase_limits=phase_limits)
-    plotter.plot_time_unwrapping_heatmap(unwrapped_frames, tx=1, rx=0, phase_limits=phase_limits)
+
+    plotter.plot_subcarrier_unwrapping_heatmap(subcarrier_frames, tx=0, rx=0, phase_limits=phase_limits)
+    plotter.plot_time_unwrapping_heatmap(unwrapped_frames, tx=0, rx=0, phase_limits=phase_limits)
 
     layout = CSI_SESSION.layout
     for signal, unwrapped, corrected, filtered, denoised in zip(
