@@ -90,11 +90,12 @@ class PipelineGraphs(Grapher):
   """Graphs plots and heatmaps for each stage in the pipeline process"""
 
   STAGES = {
-    "simulated": ("1-simulated", "Simulated"),
-    "unwrapped": ("2-unwrapped", "Phase unwrapping"),
-    "phase_residuals": ("3-phase-residuals", "Phase residuals"),
-    "hampel": ("4-hampel", "Hampel filtering"),
-    "wavelet": ("5-wavelet", "Wavelet denoising"),
+    "simulation": ("1-simulated", "Simulated"),
+    "unwrap_subcarriers": ("2-unwrapped-subcarrier", "Phase unwrapping over subcarriers"),
+    "unwrap_frames": ("3-unwrapped-frame", "Phase unwrapping over frames"),
+    "phase_residuals": ("4-phase-residuals", "Phase residuals"),
+    "hampel": ("5-hampel", "Hampel filtering"),
+    "wavelet": ("6-wavelet", "Wavelet denoising"),
   }
 
   def plot_stage(self, frame: SignalFrame, tx: int, rx: int, stage: str) -> None:
