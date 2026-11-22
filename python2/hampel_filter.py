@@ -15,6 +15,8 @@ history: deque[SignalFrame] = deque(maxlen=WINDOW_SIZE)
 
 
 def _filter_tone(window: list[Optional[float]]) -> Optional[float]:
+  """Decides whether the current tone is a spike compared with its history."""
+  
   current = window[-1]
   if current is None:
     return None
